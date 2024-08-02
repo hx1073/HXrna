@@ -268,13 +268,8 @@ go_results_df$geneID <- sapply(go_results_df$geneID, function(gene_ids) {
   gene_symbols <- sapply(strsplit(gene_ids, "/")[[1]], function(id) gene_map[id])
   paste(unique(na.omit(gene_symbols)), collapse="/")
 })
-
 # 再次保存CSV文件
 write.csv(go_results_df, "go_enrichment_results_with_symbols.csv", row.names = FALSE)
-
-
-
-
 
 
 # 转换基因符号为 ENTREZ ID
@@ -323,3 +318,22 @@ if (!is.null(go_enrich) && nrow(as.data.frame(go_enrich)) > 0) {
 if (!is.null(kegg_enrich) && nrow(as.data.frame(kegg_enrich)) > 0) {
   dotplot(kegg_enrich, showCategory = 10) + ggtitle("KEGG Pathway Enrichment Analysis")
 }
+
+# 将 enrichResult 对象转换为数据框
+go_enrich_df <- as.data.frame(go_enrich)
+# 提取 geneID 列并分解为单个 ENTREZ ID
+gene_ids <- strsplit(go_enrich_df$geneID, "/")
+# 将所有 ENTREZ ID 转换为 Gene Symbol
+entrez_ids <- unique(unlist(gene_ids))
+id_conversion <- bitr(entrez_ids, fromType = "ENTREZID", toType = "SYMBOL", OrgDb = org.Gg.eg.db)
+# 创建一个转换表
+conversion_table <- setNames(id_conversion$SYMBOL, id_conversion$ENTREZID)
+# 替换每个 geneID 的 ENTREZ ID 为 Gene Symbol
+gene_symbols_str <- sapply(gene_ids, function(ids) paste(conversion_table[ids], collapse = "/"))
+# 更新 geneID 列
+go_enrich_df$geneID <- gene_symbols_str
+# 查看转换后的数据框
+View(go_enrich_df)
+# 保存结果为 CSV 文件
+write.csv(go_enrich_df, file = "go_enrichment_results_with_symbols.csv", row.names = FALSE)
+cat("GO 富集分析结果已转换并保存为 CSV 文件。\n")

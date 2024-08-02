@@ -166,4 +166,160 @@ cytoscape <- exportNetworkToCytoscape(modTOM,
                                       nodeAttr = moduleColors[inModule])
 
 #以上是根据生信益站内容进行修改后保存
-##
+##后面是自己增加内容用于富集分析
+library(clusterProfiler)
+library(org.Gg.eg.db)
+library(enrichplot)
+library(ggplot2)
+########模块基因富集分析#########
+library(ggplot2)
+# 确保 net 对象包含颜色信息并转换为颜色标签
+if (exists("net") && !is.null(net$colors)) {
+  color_labels <- labels2colors(net$colors)  # 将数字标签转换为颜色名称
+  names(color_labels) <- colnames(datExpr)  # 给每个颜色标签加上基因名
+  cat("net 对象存在并包含颜色标签。\n")
+} else {
+  stop("net 对象不存在或没有颜色标签，请检查 WGCNA 分析步骤。\n")
+}
+
+# 检查所有模块颜色及其对应基因数量
+module_colors_table <- table(color_labels)
+print(module_colors_table)
+
+# 确认 brown 模块是否存在并提取基因
+if ("turquoise" %in% names(module_colors_table)) {
+  cat("blue 模块基因数量：", module_colors_table["turquoise"], "\n")
+  turquoise_genes <- names(color_labels)[color_labels == "turquoise"]
+  print(turquoise_genes)
+} else {
+  stop("blue 模块不存在，请检查模块识别过程。\n")
+}
+
+#保存为csv
+# 检查所有模块颜色及其对应基因数量
+module_colors_table <- table(color_labels)
+print(module_colors_table)
+write.csv(turquoise_genes, "turquoise_genes.csv", row.names = FALSE)
+HPvsLP_deg_up <- read.csv("HPvsLP_deg_up.csv")
+# 读取turquoise 模块的基因列表
+turquoise_genes <- read.csv("turquoise_genes.csv", stringsAsFactors = FALSE)
+# 读取HPvsLP_deg_up.csv文件
+HPvsLP_deg_up <- read.csv("HPvsLP_deg_up.csv", stringsAsFactors = FALSE)
+# 提取gene_name列
+gene_names <- HPvsLP_deg_up$gene_name
+# 计算交集
+common_genes <- intersect(turquoise_genes$x, gene_names)
+# 打印交集的基因数量和基因名
+cat("交集中的基因数量：", length(common_genes), "\n")
+print(common_genes)
+# 将交集结果保存为CSV文件
+write.csv(common_genes, "common_genes.csv", row.names = FALSE)
+
+##富集模块盒DEGs的COMMON基因
+# 确保common_genes是字符向量
+common_genes <- as.character(common_genes)
+# 将基因符号转换为ENTREZ ID
+entrez_ids <- bitr(common_genes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Gg.eg.db)
+# 检查转换结果，处理可能的NA值或转换失败的情况
+good_ids <- na.omit(entrez_ids$ENTREZID)
+# 执行KEGG富集分析，使用鸡的KEGG代码'gga'
+kegg_result <- enrichKEGG(gene = good_ids, organism = 'gga', keyType = 'kegg')
+print(kegg_result)
+# 可视化富集结果
+barplot(kegg_result, showCategory=20) 
+
+# 执行GO富集分析
+go_results <- enrichGO(gene = good_ids,
+                       OrgDb = org.Gg.eg.db,
+                       keyType = "ENTREZID",
+                       ont = "BP",  # 可以选择 "BP" , "CC" , "MF" 
+                       pAdjustMethod = "BH",
+                       qvalueCutoff = 0.05)
+# 查看富集分析结果
+print(go_results)
+# 可视化富集结果
+if (nrow(go_results) > 0) {
+  # 展示前5个富集显著的GO项
+  barplot(go_results, showCategory = 5)
+  
+  # 使用dotplot来展示GO富集结果
+  dotplot(go_results)  
+} else {
+  cat("没有显著的GO富集结果。\n")
+}
+# 将enrichResult对象转换为数据框
+go_results_df <- as.data.frame(go_results)
+# 输出CSV文件
+write.csv(go_results_df, "go_enrichment_results.csv", row.names = FALSE)
+# 从go_results对象中提取基因ID
+gene_list <- go_results_df$geneID
+# 分割基因ID字符串为独立的ENTREZ ID
+gene_list_split <- strsplit(gene_list, "/")
+# 扁平化列表，因为strsplit返回一个列表的列表
+all_genes <- unique(unlist(gene_list_split))
+# 使用org.Gg.eg.db将ENTREZ ID转换为gene symbol
+symbols <- select(org.Gg.eg.db, keys = all_genes, columns = c("SYMBOL"), keytype = "ENTREZID")
+# 检查转换结果
+head(symbols)
+# 创建一个基因ID到gene symbol的映射
+gene_map <- setNames(symbols$SYMBOL, symbols$ENTREZID)
+# 替换原数据框中的ENTREZID为gene symbol
+go_results_df$geneID <- sapply(go_results_df$geneID, function(gene_ids) {
+  gene_symbols <- sapply(strsplit(gene_ids, "/")[[1]], function(id) gene_map[id])
+  paste(unique(na.omit(gene_symbols)), collapse="/")
+})
+
+# 再次保存CSV文件
+write.csv(go_results_df, "go_enrichment_results_with_symbols.csv", row.names = FALSE)
+
+
+
+
+
+
+# 转换基因符号为 ENTREZ ID
+if (length(turquoise_genes) > 0) {
+  entrez_ids <- bitr(turquoise_genes, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Gg.eg.db)
+  if (nrow(entrez_ids) > 0) {
+    print(head(entrez_ids))
+  } else {
+    stop("未能找到对应的 ENTREZ ID，请检查基因符号或注释数据库。\n")
+  }
+} else {
+  stop("turquoise 模块中没有基因。\n")
+}
+
+# 进行 GO 富集分析
+if (nrow(entrez_ids) > 0) {
+  go_enrich <- enrichGO(gene         = entrez_ids$ENTREZID,
+                        OrgDb        = org.Gg.eg.db,
+                        keyType      = "ENTREZID",
+                        ont          = "ALL",
+                        pAdjustMethod = "BH",
+                        pvalueCutoff = 0.05,
+                        qvalueCutoff = 0.2)
+  
+  # 打印 GO 富集分析结果
+  print(head(go_enrich))
+}
+
+
+# 进行 KEGG 富集分析
+if (nrow(entrez_ids) > 0) {
+  kegg_enrich <- enrichKEGG(gene         = entrez_ids$ENTREZID,
+                            organism     = "gga",  # gga 是 Gallus gallus 的 KEGG 代码
+                            pAdjustMethod = "BH",
+                            pvalueCutoff = 0.05,
+                            qvalueCutoff = 0.2)
+  # 打印 KEGG 富集分析结果
+  print(head(kegg_enrich))
+}
+
+# 可视化富集分析结果
+if (!is.null(go_enrich) && nrow(as.data.frame(go_enrich)) > 0) {
+  dotplot(go_enrich, showCategory = 10) + ggtitle("GO Enrichment Analysis")
+}
+
+if (!is.null(kegg_enrich) && nrow(as.data.frame(kegg_enrich)) > 0) {
+  dotplot(kegg_enrich, showCategory = 10) + ggtitle("KEGG Pathway Enrichment Analysis")
+}

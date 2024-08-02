@@ -1,9 +1,10 @@
-
+1.WGCNA安装与数据导入
 ###加载WGCNA
 library("WGCNA")
 options(stringsAsFactors = FALSE)
 ##R语言对高低组进行产蛋
 setwd("D:\\1HX\\0.1课题-2025\\下丘脑_垂体_卵巢\\高低产蛋对比\\1高低产蛋对比")
+
 library("WGCNA")
 options(stringsAsFactors = FALSE)
 enableWGCNAThreads() #开启多线程
@@ -13,11 +14,8 @@ datExpr0 <- read.csv("fpkm_to_tpm_HL.csv",header = T,row.names = 1)#h换成tpm�
 datExpr <- t(datExpr0)
 ###导入性状矩阵
 dataTraits <- read.csv(file = "D:\\1HX\\0.1课题-2025\\下丘脑_垂体_卵巢\\高低产蛋对比\\1高低产蛋对比\\trait.csv",header = T,row.names = 1)
-
 gsg = goodSamplesGenes(datExpr0, verbose = 3);# 检查数据中样本和基因的质量
 gsg$allOK
-###聚类树计算
-#=====================================================================================
 if (!gsg$allOK){
   # Optionally, print the gene and sample names that were removed:
   if (sum(!gsg$goodGenes)>0) # 打印出将要被移除的基因名
@@ -28,14 +26,14 @@ if (!gsg$allOK){
   datExpr0 = datExpr0[gsg$goodSamples, gsg$goodGenes]
 }# 如果存在不符合质量标准的样本或基因，则进行移除
 sampleTree = hclust(dist(datExpr,method='manhattan'), method = "average")
+
+2.样品和power值筛选
 ###聚类树绘制
 sizeGrWindow(12,9)
 par(cex = 0.6);
 par(mar = c(0,4,2,0))
 plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5, cex.axis = 1.5, cex.main = 2)
 #聚类树中离群样品建议删除后重新分析
-
-
 ###使用pickSoftThreshold 函数筛选power值,power 的筛选原则是使构建的网络更符合无标度网络特征
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 sft = pickSoftThreshold(datExpr, powerVector = powers, verbose = 5,RsquaredCut = 0.8)

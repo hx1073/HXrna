@@ -34,6 +34,8 @@ par(cex = 0.6);
 par(mar = c(0,4,2,0))
 plot(sampleTree, main = "Sample clustering to detect outliers", sub="", xlab="", cex.lab = 1.5, cex.axis = 1.5, cex.main = 2)
 #聚类树中离群样品建议删除后重新分析
+
+##筛选power值
 ###使用pickSoftThreshold 函数筛选power值,power 的筛选原则是使构建的网络更符合无标度网络特征
 powers = c(c(1:10), seq(from = 12, to=20, by=2))
 sft = pickSoftThreshold(datExpr, powerVector = powers, verbose = 5,RsquaredCut = 0.8)
@@ -49,7 +51,7 @@ abline(h=0.8,col="red")
 plot(sft$fitIndices[,1], sft$fitIndices[,5],xlab="Soft Threshold (power)",ylab="Mean Connectivity", type="n",main = paste("Mean connectivity"))
 text(sft$fitIndices[,1], sft$fitIndices[,5], labels=powers, cex=cex1,col="red")
 
-
+#3.共表达模块构建和模块聚类树绘制
 ###一步法构建相关性网络
 sft$powerEstimate
 cor <- WGCNA::cor
@@ -69,7 +71,7 @@ sizeGrWindow(12, 9)
 mergedColors = labels2colors(net$colors)
 plotDendroAndColors(net$dendrograms[[1]], mergedColors[net$blockGenes[[1]]],"Module colors",dendroLabels = FALSE, hang = 0.03,addGuide = TRUE, guideHang = 0.05)
 
-
+#4.共表达模块分析
 MEList = moduleEigengenes(datExpr, colors = mergedColors) 
 ###计算得到的模块特征值
 MEs = MEList$eigengenes
@@ -79,7 +81,7 @@ rownames(MET) <- rownames(datExpr)
 plotEigengeneNetworks(MET, '', marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2), 
                       cex.lab =0.8, xLabelsAngle= 90,printAdjacency = T,cex.adjacency = 0.6)
 
-
+#模块基因可视化热图
 nSelect = 400
 set.seed(10);
 dissTOM = 1-TOMsimilarityFromExpr(datExpr, power = sft$powerEstimate);
@@ -92,7 +94,7 @@ plotDiss = selectTOM^7;
 diag(plotDiss) = NA;
 TOMplot(plotDiss, selectTree, selectColors, main = "Network heatmap plot, selected genes")
 
-
+#模块与性状相关性图
 nGenes = ncol(datExpr);
 nSamples = nrow(datExpr);
 MEs0 = moduleEigengenes(datExpr, moduleColors)$eigengenes
@@ -123,18 +125,17 @@ labeledHeatmap(Matrix = moduleTraitCor,
                zlim = c(-1,1),
                main = paste("Module-trait relationships"))
 
-
 # 确定 ANXA2(ENSGALG00000003770) 基因在 datExpr 中的位置
-geneIndex <- which(colnames(datExpr) == "OSBP2")
+geneIndex <- which(colnames(datExpr) == "ANXA2")
 # 如果找到基因，则检查它的模块颜色
 if (length(geneIndex) > 0) {
   geneModule <- mergedColors[geneIndex]
-  cat("OSBP2 is in the", geneModule, "module.\n")
+  cat("ANXA2 is in the", geneModule, "module.\n")
 } else {
-  cat("OSBP2 gene not found in the expression data.\n")
+  cat("ANXA2 gene not found in the expression data.\n")
 }
 
-
+#模块基因表达模式分析
 moduleColors <- labels2colors(net$colors)
 modules <- moduleColors
 ###black 模块基因表达模式
@@ -145,9 +146,8 @@ ME <- MEs[,"MEblack"]
 names(ME) <- rownames(datExpr)
 barplot(ME, col="brown", main="", cex.main=0.6,ylab="eigengene expression", xlab="array sample")
 
-
+#5.模块导出
 TOM <- TOMsimilarityFromExpr(datExpr, power = sft$powerEstimate)
-
 ###选择需要导出的模块颜色
 modules <- c("brown")
 ###Cytoscape文件导出
@@ -164,3 +164,6 @@ cytoscape <- exportNetworkToCytoscape(modTOM,
                                       nodeNames = modProbes,
                                       threshold = 0.4,
                                       nodeAttr = moduleColors[inModule])
+
+#以上是根据生信益站内容进行修改后保存
+##

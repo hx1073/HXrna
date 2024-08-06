@@ -11,14 +11,12 @@ ref <- gtf[,c(10,12,15)]
 all_genes <- read.csv("HPvsLP_deg.csv")
 genes <- all_genes[,c(1,22)]
 merged_df <- left_join(genes, ref, by = "gene_id")
-
-# 方法一：去除完全重复的行
+# 方法一：去除完全重复的行#不太行
 #unique_df <- distinct(merged_df)
 # 方法二：根据特定列去重，例如根据gene_id去重
 unique_df <- distinct(merged_df, gene_name, .keep_all = TRUE)
 # 检查去重后的数据框
 print(unique_df)
-
 
 # 使用select函数从org.Gg.eg.db中获取gene_name到ENTREZID的映射
 gene_mapping <- AnnotationDbi::select(org.Gg.eg.db,
@@ -27,11 +25,8 @@ gene_mapping <- AnnotationDbi::select(org.Gg.eg.db,
                                       keytype = "SYMBOL")
 # 查看映射数据
 head(gene_mapping)
-
-
-# 将rna_seq_df与gene_mapping合并
+# 将unique_df与gene_mapping合并
 converted_df <- left_join(unique_df, gene_mapping, by = c("gene_name" = "SYMBOL"))
-
 
 data_sort <- converted_df %>% 
   arrange(desc(log2FoldChange))

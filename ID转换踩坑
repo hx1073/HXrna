@@ -1,0 +1,52 @@
+#参考下面链接博主以及生信益站的GSEA富集分析的内容
+#可能是因为版本太旧导致id转换错误，换为源代码gtf注释直接进行ID对比转换
+#########https://blog.csdn.net/Queen_yu/article/details/135620052?spm=1001.2014.3001.5501
+#rm(list = ls())#清理环境
+#BiocManager::install("rtracklayer")
+library(dplyr)
+library(rtracklayer)
+gtf <- rtracklayer::import('Gallus_gallus.GRCg6a.106.gtf')#读取GTF文件其他物种也是相同的读取方式，把文件换成自己的放到目录下面
+gtf<-as.data.frame(gtf)#转化为正常可读取模式
+ref <- gtf[,c(10,12,15)]
+all_genes <- read.csv("HPvsLP_deg.csv")
+genes <- all_genes[,c(1,22)]
+merged_df <- left_join(genes, ref, by = "gene_id")
+
+# 方法一：去除完全重复的行
+#unique_df <- distinct(merged_df)
+# 方法二：根据特定列去重，例如根据gene_id去重
+unique_df <- distinct(merged_df, gene_name, .keep_all = TRUE)
+# 检查去重后的数据框
+print(unique_df)
+
+
+# 使用select函数从org.Gg.eg.db中获取gene_name到ENTREZID的映射
+gene_mapping <- AnnotationDbi::select(org.Gg.eg.db,
+                                      keys = unique_df$gene_name,
+                                      columns = c("ENSEMBL", "ENTREZID"),
+                                      keytype = "SYMBOL")
+# 查看映射数据
+head(gene_mapping)
+
+
+# 将rna_seq_df与gene_mapping合并
+converted_df <- left_join(unique_df, gene_mapping, by = c("gene_name" = "SYMBOL"))
+
+
+data_sort <- converted_df %>% 
+  arrange(desc(log2FoldChange))
+gene_list <- data_sort$log2FoldChange
+names(gene_list) <- data_sort$ENTREZID
+head(gene_list)
+res <- gseKEGG(
+  gene_list,    # 根据logFC排序的基因集
+  organism = "gga",    # ji的拉丁名缩写 
+  pvalueCutoff = 0.05,
+  pAdjustMethod = "BH"
+)
+dotplot(res)
+library(ggplot2)
+dotplot(
+  res, 
+  showCategory=10, 
+  split=".sign") + facet_grid(.~.sign)

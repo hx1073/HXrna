@@ -1,0 +1,41 @@
+library(org.Gg.eg.db)
+library(pathview)
+library(enrichplot)
+library(clusterProfiler)
+library(ggplot2)
+library(dplyr)
+all_genes <- read.csv("D:\\1HX\\0.1课题-2025\\下丘脑_垂体_卵巢\\高低产蛋对比\\1高低产蛋对比\\HPvsLP_deg.csv")
+head(all_genes)
+dim(all_genes)
+# 选取特定列创建新的数据框
+selected_genes <- all_genes[, c("gene_id", "gene_name", "log2FoldChange")]
+# 处理重复的基因名，保留绝对log2FoldChange最大的那个
+unique_genes <- selected_genes %>%
+  group_by(gene_name) %>%  # 按照基因名分组
+  filter(abs(log2FoldChange) == max(abs(log2FoldChange))) %>%  # 选出每组log2FoldChange绝对值最大的行
+  slice(1) %>%  # 如果有并列的情况，只取第一个
+  ungroup()  # 去掉分组，使其恢复为普通数据框
+
+data_sort <- unique_genes %>% 
+  arrange(desc(log2FoldChange))
+head(data_sort)
+gene_list <- data_sort$log2FoldChange
+names(gene_list) <- data_sort$gene_name
+head(gene_list)
+# 检查是否包含ANXA2
+"ANXA2" %in% names(gene_list)
+res <- gseGO(
+  gene_list,    # 根据logFC排序的基因集
+  ont = "BP",    # 可选"BP"、"MF"、"CC"三大类或"ALL"
+  OrgDb = org.Gg.eg.db,    # 使用鸡的OrgDb
+  keyType = "SYMBOL",    # 基因id类型
+  pvalueCutoff = 0.05,
+  pAdjustMethod = "BH",    # p值校正方法
+)
+head(res,2)
+dotplot(res)
+dotplot(
+  res, 
+  showCategory=10, 
+  split=".sign") + facet_grid(.~.sign)
+gseaplot2(res,5,pvalue_table = T)

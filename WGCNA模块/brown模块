@@ -1,0 +1,74 @@
+library(ggplot2)
+# 确保 net 对象包含颜色信息并转换为颜色标签
+if (exists("net") && !is.null(net$colors)) {
+  color_labels <- labels2colors(net$colors)  # 将数字标签转换为颜色名称
+  names(color_labels) <- colnames(datExpr)  # 给每个颜色标签加上基因名
+  cat("net 对象存在并包含颜色标签。\n")
+} else {
+  stop("net 对象不存在或没有颜色标签，请检查 WGCNA 分析步骤。\n")
+}
+
+# 检查所有模块颜色及其对应基因数量
+module_colors_table <- table(color_labels)
+print(module_colors_table)
+
+# 确认 brown 模块是否存在并提取基因
+if ("brown" %in% names(module_colors_table)) {
+  cat("brown 模块基因数量：", module_colors_table["brown"], "\n")
+  brown_genes <- names(color_labels)[color_labels == "brown"]
+  print(brown_genes)
+} else {
+  stop("brown 模块不存在，请检查模块识别过程。\n")
+}
+
+# 检查所有模块颜色及其对应基因数量
+module_colors_table <- table(color_labels)
+print(module_colors_table)
+write.csv(brown_genes, "brown_genes.csv", row.names = FALSE)
+HPvsLP_deg_up <- read.csv("HPvsLP_deg_up.csv")
+# 读取turquoise 模块的基因列表
+brown_genes <- read.csv("brown_genes.csv", stringsAsFactors = FALSE)
+# 读取HPvsLP_deg_up.csv文件
+HPvsLP_deg_up <- read.csv("HPvsLP_deg_up.csv", stringsAsFactors = FALSE)
+# 提取gene_name列
+gene_names <- HPvsLP_deg_up$gene_name
+# 计算交集
+common_genes_brown <- intersect(brown_genes$x, gene_names)
+# 打印交集的基因数量和基因名
+cat("交集中的基因数量：", length(common_genes_brown), "\n")
+print(common_genes_brown)
+# 将交集结果保存为CSV文件
+write.csv(common_genes_brown, "common_genes_brown.csv", row.names = FALSE)
+
+##富集COMMON基因
+# 确保common_genes是字符向量
+common_genes_brown <- as.character(common_genes_brown)
+# 将基因符号转换为ENTREZ ID
+entrez_ids <- bitr(common_genes_brown, fromType = "SYMBOL", toType = "ENTREZID", OrgDb = org.Gg.eg.db)
+# 检查转换结果，处理可能的NA值或转换失败的情况
+good_ids <- na.omit(entrez_ids$ENTREZID)
+# 执行KEGG富集分析，使用鸡的KEGG代码'gga'
+kegg_result <- enrichKEGG(gene = good_ids, organism = 'gga', keyType = 'kegg')
+print(kegg_result)
+# 可视化富集结果
+barplot(kegg_result, showCategory=20) 
+
+# 执行GO富集分析
+go_results <- enrichGO(gene = good_ids,
+                       OrgDb = org.Gg.eg.db,
+                       keyType = "ENTREZID",
+                       ont = "BP",  # 可以选择 "BP" , "CC" , "MF" 
+                       pAdjustMethod = "BH",
+                       qvalueCutoff = 0.05)
+# 查看富集分析结果
+print(go_results)
+# 可视化富集结果
+if (nrow(go_results) > 0) {
+  # 展示前5个富集显著的GO项
+  barplot(go_results, showCategory = 5)
+  
+  # 使用dotplot来展示GO富集结果
+  dotplot(go_results)  
+} else {
+  cat("没有显著的GO富集结果。\n")
+}

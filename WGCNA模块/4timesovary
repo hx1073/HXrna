@@ -1,0 +1,31 @@
+#做WGCNA时候遇到了颜色模块中无基因的情况
+#跑完WGCNA的流程后
+moduleColors <- net$colors
+##检查
+table(moduleColors)
+# 将数字模块标签转换为颜色标签
+moduleColors <- labels2colors(net$colors)
+# 查看转换后的模块颜色信息
+table(moduleColors)
+length(moduleColors)
+ncol(datExpr)
+moduleColors <- labels2colors(net$colors)
+# 确保 moduleColors 和 datExpr 的列名正确对应
+names(moduleColors) <- colnames(datExpr)
+salmonGenes <- names(moduleColors[moduleColors == "salmon"])
+##检查
+
+#上面检查部分是排查过程。主要原因如下
+问题的根源
+在WGCNA中，模块分配结果存储在net$colors中，最初它只是一系列数字标签。通过使用labels2colors函数，这些数字被转换成了具体的颜色标签，这些颜色标签与datExpr中的基因一一对应。
+但是，直接使用labels2colors(net$colors)得到的moduleColors并没有包含任何基因名称信息，因此在提取模块基因时，程序并不知道哪个标签对应于哪个基因。
+
+关键点：手动设置names(moduleColors)
+#运行以下代码之后：# 确保 moduleColors 和 datExpr 的列名正确对应
+names(moduleColors) <- colnames(datExpr)
+这段代码为moduleColors设置了基因名称，这些名称是从表达矩阵datExpr的列名（基因名）中获取的。具体来说：
+colnames(datExpr)表示表达矩阵中的所有基因名称（列名）。
+names(moduleColors)表示每一个模块标签的名称，通常为基因名。
+##再次提取模块基因的代码
+salmonGenes <- names(moduleColors[moduleColors == "salmon"])
+#原来的错误代码是salmonGenes <- names(datExpr[moduleColors == "salmon"])

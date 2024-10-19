@@ -28,4 +28,4 @@ colnames(datExpr)表示表达矩阵中的所有基因名称（列名）。
 names(moduleColors)表示每一个模块标签的名称，通常为基因名。
 ##再次提取模块基因的代码
 salmonGenes <- names(moduleColors[moduleColors == "salmon"])
-#原来的错误代码是salmonGenes <- names(datExpr[moduleColors == "salmon"])
+#原来的错误代码是salmonGenes <- names(datExpr[moduleColors == "salmon"])##上面重新匹配后再运行提取基因就可以了

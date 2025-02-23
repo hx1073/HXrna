@@ -1,0 +1,14 @@
+# 加载必要的包
+library(readxl)    # 读取Excel文件
+library(dplyr)     # 数据处理
+library(ggplot2)   # 绘图
+
+# 1. 读取数据 ----------------------------------------------------------------
+data <- read_excel("30vs20GO.xlsx") 
+ggplot(data, aes(x = reorder(Description, -Count), y = Count, fill = Category)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ Category, scales = "free_x") +  # 分面设置，横坐标分开
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +  # x 轴标签倾斜 45 度
+  scale_fill_manual(values = c("#BE4352", "#F3B498", "#707070")) +  # 设置颜色填充
+  labs(title = "GO Enrichment BarPlot", y = "Count", x = "GO Term Description")

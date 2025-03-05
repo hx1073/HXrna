@@ -1,0 +1,18 @@
+#小鼠和人组织RNA-seq原始数据处理以及表达矩阵整合
+            # Bio小菜鸟
+#工具的安装
+# 创建名为RNA-seq的虚拟环境
+conda create --name RNA-seq python=3.9
+# 激活虚拟环境
+conda activate RNA-seq
+##安装工具，这些工具
+# 质控
+conda install -c bioconda fastqc
+# 预处理
+conda install -c bioconda fastp
+# 比对
+conda install -c bioconda hisat2
+# 将sam文件转成bam文件
+conda install -c bioconda samtools=1.6
+# 计算count值
+conda install -c bioconda subread
